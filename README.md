@@ -1,46 +1,94 @@
-# Getting Started with Create React App
+# ChainTask
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+**ChainTask** は、タスク間の依存関係を視覚的に管理できるフローチャートベースのタスク管理ツールです。React と React Flow をベースに、xAIの **Grok3** が「Vibe Coding」スタイルで完全生成したプロジェクトです。タスクをノード、依存関係をエッジとして表現し、直感的な操作でタスク管理を楽しめます。あくまでサンプルアプリとして作られたものなので、修正やサポートはほぼ期待しないでくださいね（笑）。ちなみに、このREADME.md自体もGrok3が書いたものです。AIのバイブス、感じてください！
 
-## Available Scripts
+## 主な機能
 
-In the project directory, you can run:
+- **タスクの視覚化**: タスクをノードとして、依存関係を矢印で表現。
+- **依存関係の管理**: 親タスクが未完了だと子タスクの完了をブロック。
+- **スタイルのカスタマイズ**: タスクの状態（完了/未完了）に応じた色分けや選択時の強調。
+- **プロジェクト管理**: 複数のプロジェクトを作成・切り替え・保存。
+- **データのエクスポート/インポート**: JSON形式でタスクデータを保存・読み込み。
+- **履歴機能**: Undo/Redo で操作を戻したり進めたり。
+- **ローカルストレージ**: プロジェクトデータをブラウザに自動保存。
 
-### `npm start`
+## デモ
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+[https://chaintask.netlify.app/](https://chaintask.netlify.app/) でライブデモをチェック！ Grok3の「Vibe」を感じてください。
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## インストール
 
-### `npm test`
+ローカルで動かしたい場合、以下の手順でどうぞ。
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 前提条件
 
-### `npm run build`
+- Node.js（v16以上推奨）
+- npm または yarn
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 手順
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+1. **リポジトリをクローン**
+   ```bash
+   git clone https://github.com/[あなたのユーザー名]/chaintask.git
+   cd chaintask
+   ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+2. **依存関係をインストール**
+    ```bash
+    npm install
+    ```
 
-### `npm run eject`
+3. **アプリを起動**
+    ```bash
+    npm run start:cmd
+    ```
+    ブラウザで http://localhost:3000 が開きます。
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+## 使い方
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+1. **タスクの追加**: 「タスク追加」ボタンで新しいタスクをポン。
+2. **依存関係の設定**: ノードをドラッグして矢印でつなぐ。
+3. **タスクの編集**: ダブルクリックで名前や完了状態をいじる。
+4. **プロジェクトの切り替え**: 「プロジェクト選択」で別のプロジェクトへジャンプ。
+5. **データの保存**: 「エクスポート」でJSON吐き出し、「インポート」で読み込み。
+6. **履歴操作**: 「元に戻す」「やり直し」でタイムトラベル。
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+### 操作のヒント
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+- **タスクの選択**: クリックで選択（青枠）、削除OK。
+- **矢印の種類**: ドロップダウンで直線、スムーズステップ、ベジェ曲線をチョイス。
+- **状態の視覚化**:
+  - 未完了（親なし）: 緑枠
+  - 完了（未完了の親あり）: 赤枠
+  - 選択中: 青枠
 
-## Learn More
+## 技術スタック
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- **React**: UI構築
+- **React Flow**: フローチャートの実装
+- **TypeScript**: 型安全なコード
+- **UUID**: ユニークID生成
+- **LocalStorage**: データの永続化
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Grok3によるVibe Codingについて
+
+このプロジェクトは、xAIのGrok3が「いい感じに」コードを生成したものです。人間の手はほぼ入っておらず、AIのクリエイティブなバイブス全開で作られました。そのため、バグや改善要望があっても、僕（開発者）にはほぼサポートするスキルがないです（笑）。Grok3の生成物をそのまま楽しむサンプルとしてお楽しみください！
+
+## コントリビューション
+
+バグ報告やアイデアはIssueで歓迎しますが、対応はほぼできません（Grok3に頼んだだけなので…）。もし自分で直したい猛者は以下でどうぞ：
+
+1. リポジトリをフォーク
+2. ブランチ作成 (`git checkout -b feature/awesome-fix`)
+3. コミット (`git commit -m "Fix something cool"`)
+4. プッシュ (`git push origin feature/awesome-fix`)
+5. プルリクエストを送る
+
+## ライセンス
+
+[MITライセンス](LICENSE) の下で公開しています。自由に使ってください！
+
+## 謝辞
+
+- [React Flow](https://reactflow.dev/) の最高のライブラリに感謝。
+- Grok3の「Vibe Coding」に敬意を。AIってやっぱすごいね。
