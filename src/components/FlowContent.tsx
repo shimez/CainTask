@@ -369,7 +369,7 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
       reader.readAsText(file);
       event.target.value = '';
     },
-    [arrowType, selectedTaskId, selectedArrowId, setProjects, setCurrentProjectIndex, setTasks, setArrows, saveToLocalStorage, effectiveProjects, setViewport]
+    [arrowType, selectedTaskId, selectedArrowId, setProjects, setCurrentProjectIndex, setTasks, setArrows, saveToLocalStorage, setViewport]
   );
 
   const triggerFileInput = () => fileInputRef.current?.click();
