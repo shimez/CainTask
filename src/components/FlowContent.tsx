@@ -17,6 +17,7 @@ import { Project, TaskNode } from '../types';
 import { updateStyles, areAllParentsCompleted, wouldCreateCycle } from '../utils/graphUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { createNewLocalProject, saveCurrentProjectAsNew, handleDeleteProject } from '../utils/projectUtils';
+import { useGraphHistory } from '../hooks/useGraphHistory';
 
 import undoIcon from '../assets/undo.png';
 import redoIcon from '../assets/redo.png';
@@ -80,8 +81,6 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
   const [selectedArrowId, setSelectedArrowId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<TaskNode | null>(null);
   const [taskIdCounter, setTaskIdCounter] = useState<number>(effectiveProjects[effectiveIndex]?.taskIdCounter || sampleProject.taskIdCounter);
-  const [history, setHistory] = useState<{ tasks: TaskNode[]; arrows: Edge[] }[]>([]);
-  const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const taskOperationsRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,6 +88,7 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
   const [activeTab, setActiveTab] = useState<'tasks' | 'projects' | 'files'>('tasks');
   const [showProjectSelectModal, setShowProjectSelectModal] = useState<boolean>(false);
   const [showEditTitleModal, setShowEditTitleModal] = useState<boolean>(false);
+  const { canUndo, canRedo, record: recordHistory, reset: resetHistory, undo, redo } = useGraphHistory(setTasks, setArrows);
 
   /**
    * 現在のプロジェクト状態をローカルストレージに保存。
@@ -108,32 +108,8 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
     setProjects(updatedProjects);
     localStorage.setItem('projects', JSON.stringify(updatedProjects));
     localStorage.setItem('lastProjectId', effectiveProjects[effectiveIndex].localId);
-    setHistory((prev) => {
-      const newHistory = [...prev.slice(0, historyIndex + 1), { tasks: [...nextTasks], arrows: [...nextArrows] }];
-      setHistoryIndex(newHistory.length - 1);
-      return newHistory;
-    });
-  }, [effectiveProjects, effectiveIndex, tasks, arrows, taskIdCounter, setProjects, historyIndex, getViewport]);
-
-  /** Undo操作。履歴を1つ前に戻し、タスクと矢印を復元 */
-  const undo = useCallback(() => {
-    if (historyIndex > 0) {
-      setHistoryIndex((prev) => prev - 1);
-      const { tasks: prevTasks, arrows: prevArrows } = history[historyIndex - 1];
-      setTasks(prevTasks);
-      setArrows(prevArrows);
-    }
-  }, [history, historyIndex, setTasks, setArrows]);
-
-  /** Redo操作。履歴を1つ進め、タスクと矢印を復元 */
-  const redo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      setHistoryIndex((prev) => prev + 1);
-      const { tasks: nextTasks, arrows: nextArrows } = history[historyIndex + 1];
-      setTasks(nextTasks);
-      setArrows(nextArrows);
-    }
-  }, [history, historyIndex, setTasks, setArrows]);
+    recordHistory({ tasks: nextTasks, arrows: nextArrows });
+  }, [effectiveProjects, effectiveIndex, tasks, arrows, taskIdCounter, setProjects, getViewport, recordHistory]);
 
   useEffect(() => {
     const handleBeforeUnload = () => saveToLocalStorage();
@@ -403,6 +379,7 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
       setArrows([]);
       setTimeout(() => {
         const index = effectiveProjects.findIndex((p) => p.localId === project.localId);
+        resetHistory();
         setCurrentProjectIndex(index);
         setTasks(project.tasks);
         const unifiedArrows = project.arrows.map((arrow) => ({
@@ -422,7 +399,7 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
         }
       }, 0);
     },
-    [effectiveProjects, saveToLocalStorage, setTasks, setArrows, setTaskIdCounter, setCurrentProjectIndex, arrowType, selectedTaskId, selectedArrowId, setViewport, fitView]
+    [effectiveProjects, saveToLocalStorage, resetHistory, setTasks, setArrows, setTaskIdCounter, setCurrentProjectIndex, arrowType, selectedTaskId, selectedArrowId, setViewport, fitView]
   );
 
   useEffect(() => {
@@ -581,10 +558,10 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
               >
                 削除
               </button>
-              <button onClick={undo} disabled={historyIndex <= 0} style={{ padding: '5px', border: 'none', background: 'none', cursor: 'pointer' }} title="元に戻す">
+              <button onClick={undo} disabled={!canUndo} style={{ padding: '5px', border: 'none', background: 'none', cursor: 'pointer' }} title="元に戻す">
                 <img src={undoIcon} alt="Undo" style={{ width: ICON_SIZE, height: ICON_SIZE }} />
               </button>
-              <button onClick={redo} disabled={historyIndex >= history.length - 1} style={{ padding: '5px', border: 'none', background: 'none', cursor: 'pointer' }} title="やり直す">
+              <button onClick={redo} disabled={!canRedo} style={{ padding: '5px', border: 'none', background: 'none', cursor: 'pointer' }} title="やり直す">
                 <img src={redoIcon} alt="Redo" style={{ width: ICON_SIZE, height: ICON_SIZE }} />
               </button>
               <div
