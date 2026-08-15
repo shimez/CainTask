@@ -20,15 +20,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createNewLocalProject, saveCurrentProjectAsNew, handleDeleteProject } from '../utils/projectUtils';
 import { useGraphHistory } from '../hooks/useGraphHistory';
 import { parseProjectFile, serializeProjectFile } from '../utils/projectData';
-
-import undoIcon from '../assets/undo.png';
-import redoIcon from '../assets/redo.png';
-import straightIcon from '../assets/straight.png';
-import smoothstepIcon from '../assets/smoothstep.png';
-import bezierIcon from '../assets/bezier.png';
-
-/** 操作パネルのz-index値。モーダルより手前に表示 */
-const OPERATION_PANEL_Z_INDEX = 100;
+import { ArrowType, OperationPanel, OperationTab, OPERATION_PANEL_Z_INDEX } from './OperationPanel';
 /** タブバーの高さ（ピクセル）。レイアウト計算に使用 */
 const TAB_BAR_HEIGHT = 50;
 /** 操作パネルの高さ（ピクセル）。タスク追加位置の計算に使用 */
@@ -37,12 +29,6 @@ const OPERATION_PANEL_HEIGHT = 80;
 const CANVAS_MARGIN = 50;
 /** ボタンのサイズ（ピクセル）。丸ボタンの幅と高さに使用 */
 const BUTTON_SIZE = 48;
-/** ボタンの間隔（ピクセル）。レイアウト調整用 */
-const BUTTON_GAP = 10;
-/** タブ間の間隔（ピクセル）。タブバーのレイアウト調整用 */
-const TAB_GAP = 5;
-/** アイコンのサイズ（ピクセル）。操作ボタンのアイコンに使用 */
-const ICON_SIZE = 20;
 
 interface FlowContentProps {
   projects: Project[];
@@ -78,16 +64,15 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
 
   const [tasks, setTasks, onTasksChange] = useNodesState<TaskNode['data']>(effectiveProjects[effectiveIndex]?.tasks || sampleProject.tasks);
   const [arrows, setArrows, onEdgesChange] = useEdgesState<Edge[]>(effectiveProjects[effectiveIndex]?.arrows || sampleProject.arrows);
-  const [arrowType, setArrowType] = useState<'straight' | 'smoothstep' | 'bezier'>('straight');
+  const [arrowType, setArrowType] = useState<ArrowType>('straight');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedArrowId, setSelectedArrowId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<TaskNode | null>(null);
   const [taskIdCounter, setTaskIdCounter] = useState<number>(effectiveProjects[effectiveIndex]?.taskIdCounter || sampleProject.taskIdCounter);
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const taskOperationsRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { project, fitView, getViewport, setViewport } = useReactFlow();
-  const [activeTab, setActiveTab] = useState<'tasks' | 'projects' | 'files'>('tasks');
+  const [activeTab, setActiveTab] = useState<OperationTab>('tasks');
   const [showProjectSelectModal, setShowProjectSelectModal] = useState<boolean>(false);
   const [showEditTitleModal, setShowEditTitleModal] = useState<boolean>(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -499,195 +484,41 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
         <Controls />
         <MiniMap />
       </ReactFlow>
-      <div className="operation-panel" style={{ position: 'absolute', top: 10, left: 10, zIndex: OPERATION_PANEL_Z_INDEX, maxWidth: 'calc(100vw - 30px)', overflow: 'hidden' }}>
-        <div style={{ marginBottom: BUTTON_GAP }}>
-          <select
-            value={effectiveProjects[effectiveIndex]?.localId || ''}
-            onChange={(e) => {
-              const selectedProject = effectiveProjects.find((p) => p.localId === e.target.value);
-              if (selectedProject) handleProjectSwitch(selectedProject);
-            }}
-            style={{ padding: '5px', width: '100%', maxWidth: '300px', boxSizing: 'border-box' }}
-          >
-            {effectiveProjects.map((p) => (
-              <option key={p.localId} value={p.localId}>
-                {`${p.title} (${new Date(p.lastSavedAt ?? new Date().toISOString()).toLocaleString('ja-JP', {
-                  year: 'numeric',
-                  month: '2-digit',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })})`}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div
-          className="tab-bar"
-          style={{
-            display: 'flex',
-            gap: TAB_GAP,
-            marginBottom: BUTTON_GAP,
-            borderBottom: '2px solid #ccc',
-            overflowX: 'auto',
-            whiteSpace: 'nowrap',
-            maxWidth: 'calc(100vw - 80px)',
-            boxSizing: 'border-box',
-          }}
-        >
-          <button
-            onClick={() => setActiveTab('tasks')}
-            style={{
-              padding: '8px 15px',
-              background: 'none',
-              border: 'none',
-              borderBottom: activeTab === 'tasks' ? '2px solid #007bff' : 'none',
-              color: activeTab === 'tasks' ? '#007bff' : '#666',
-              fontWeight: activeTab === 'tasks' ? 'bold' : 'normal',
-              cursor: 'pointer',
-            }}
-            title="タスク操作"
-          >
-            タスク
-          </button>
-          <button
-            onClick={() => setActiveTab('projects')}
-            style={{
-              padding: '8px 15px',
-              background: 'none',
-              border: 'none',
-              borderBottom: activeTab === 'projects' ? '2px solid #007bff' : 'none',
-              color: activeTab === 'projects' ? '#007bff' : '#666',
-              fontWeight: activeTab === 'projects' ? 'bold' : 'normal',
-              cursor: 'pointer',
-            }}
-            title="プロジェクト管理"
-          >
-            プロジェクト
-          </button>
-          <button
-            onClick={() => setActiveTab('files')}
-            style={{
-              padding: '8px 15px',
-              background: 'none',
-              border: 'none',
-              borderBottom: activeTab === 'files' ? '2px solid #007bff' : 'none',
-              color: activeTab === 'files' ? '#007bff' : '#666',
-              fontWeight: activeTab === 'files' ? 'bold' : 'normal',
-              cursor: 'pointer',
-            }}
-            title="ファイル操作"
-          >
-            ファイル
-          </button>
-        </div>
-        <div ref={taskOperationsRef} style={{ padding: BUTTON_GAP }}>
-          {activeTab === 'tasks' && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: BUTTON_GAP }}>
-              <button onClick={addTask} style={{ padding: '5px 10px' }} title="新しいタスクを追加">
-                タスク追加
-              </button>
-              <button
-                onClick={deleteSelected}
-                disabled={!selectedTaskId && !selectedArrowId}
-                style={{ padding: '5px 10px', opacity: !selectedTaskId && !selectedArrowId ? 0.5 : 1 }}
-                title="選択したタスクまたは矢印を削除"
-              >
-                削除
-              </button>
-              <button onClick={undo} disabled={!canUndo} style={{ padding: '5px', border: 'none', background: 'none', cursor: 'pointer' }} title="元に戻す">
-                <img src={undoIcon} alt="Undo" style={{ width: ICON_SIZE, height: ICON_SIZE }} />
-              </button>
-              <button onClick={redo} disabled={!canRedo} style={{ padding: '5px', border: 'none', background: 'none', cursor: 'pointer' }} title="やり直す">
-                <img src={redoIcon} alt="Redo" style={{ width: ICON_SIZE, height: ICON_SIZE }} />
-              </button>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  padding: '5px',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                }}
-              >
-                <span style={{ marginRight: '5px', fontSize: '14px' }}>線種:</span>
-                <button
-                  onClick={() => handleArrowTypeChange('straight')}
-                  style={{
-                    padding: '5px',
-                    border: arrowType === 'straight' ? '2px solid #007bff' : '1px solid #ccc',
-                    background: 'none',
-                    cursor: 'pointer',
-                  }}
-                  title="直線"
-                >
-                  <img src={straightIcon} alt="Straight" style={{ width: ICON_SIZE, height: ICON_SIZE }} />
-                </button>
-                <button
-                  onClick={() => handleArrowTypeChange('smoothstep')}
-                  style={{
-                    padding: '5px',
-                    border: arrowType === 'smoothstep' ? '2px solid #007bff' : '1px solid #ccc',
-                    background: 'none',
-                    cursor: 'pointer',
-                  }}
-                  title="カギ線"
-                >
-                  <img src={smoothstepIcon} alt="Smoothstep" style={{ width: ICON_SIZE, height: ICON_SIZE }} />
-                </button>
-                <button
-                  onClick={() => handleArrowTypeChange('bezier')}
-                  style={{
-                    padding: '5px',
-                    border: arrowType === 'bezier' ? '2px solid #007bff' : '1px solid #ccc',
-                    background: 'none',
-                    cursor: 'pointer',
-                  }}
-                  title="曲線"
-                >
-                  <img src={bezierIcon} alt="Bezier" style={{ width: ICON_SIZE, height: ICON_SIZE }} />
-                </button>
-              </div>
-            </div>
-          )}
-          {activeTab === 'projects' && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: BUTTON_GAP }}>
-              <button
-                onClick={handleCreateNewProject}
-                style={{ padding: '5px 10px' }}
-                title="新しいプロジェクトを作成"
-              >
-                プロジェクトの追加
-              </button>
-              <button onClick={() => setShowProjectSelectModal(true)} style={{ padding: '5px 10px' }} title="プロジェクトを管理">
-                管理
-              </button>
-              <button onClick={() => setShowEditTitleModal(true)} style={{ padding: '5px 10px' }} title="プロジェクト名を変更">
-                名前変更
-              </button>
-              <button
-                onClick={() => saveCurrentProjectAsNew(projects, effectiveIndex, tasks, arrows, taskIdCounter, setProjects, setCurrentProjectIndex, saveToLocalStorage)}
-                style={{ padding: '5px 10px' }}
-                title="現在のプロジェクトを別名で保存"
-              >
-                別名保存
-              </button>
-            </div>
-          )}
-          {activeTab === 'files' && (
-            <div style={{ display: 'flex', gap: BUTTON_GAP }}>
-              <button onClick={exportData} style={{ padding: '5px 10px' }} title="プロジェクトをJSONファイルとしてエクスポート">
-                エクスポート
-              </button>
-              <button onClick={triggerFileInput} style={{ padding: '5px 10px' }} title="JSONファイルからプロジェクトをインポート">
-                インポート
-              </button>
-              <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json" onChange={importData} />
-            </div>
-          )}
-        </div>
-      </div>
+      <OperationPanel
+        projects={effectiveProjects}
+        currentProjectId={effectiveProjects[effectiveIndex]?.localId || ''}
+        activeTab={activeTab}
+        arrowType={arrowType}
+        canDelete={Boolean(selectedTaskId || selectedArrowId)}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        fileInputRef={fileInputRef}
+        onProjectSwitch={handleProjectSwitch}
+        onTabChange={setActiveTab}
+        onAddTask={addTask}
+        onDelete={deleteSelected}
+        onUndo={undo}
+        onRedo={redo}
+        onArrowTypeChange={handleArrowTypeChange}
+        onCreateProject={handleCreateNewProject}
+        onManageProjects={() => setShowProjectSelectModal(true)}
+        onRenameProject={() => setShowEditTitleModal(true)}
+        onSaveAsNew={() =>
+          saveCurrentProjectAsNew(
+            projects,
+            effectiveIndex,
+            tasks,
+            arrows,
+            taskIdCounter,
+            setProjects,
+            setCurrentProjectIndex,
+            saveToLocalStorage
+          )
+        }
+        onExport={exportData}
+        onImportClick={triggerFileInput}
+        onImport={importData}
+      />
       <button
         onClick={addTask}
         style={{
@@ -755,4 +586,5 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
     </>
   );
 };
+
 
