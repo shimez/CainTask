@@ -1,9 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { vi } from 'vitest';
 import { AccessibleModal } from './AccessibleModal';
 
 describe('AccessibleModal', () => {
   it('exposes dialog semantics and closes with Escape', () => {
-    const onClose = jest.fn();
+    const onClose = vi.fn();
     render(
       <AccessibleModal titleId="dialog-title" onClose={onClose}>
         <h2 id="dialog-title">設定</h2>
@@ -18,3 +19,4 @@ describe('AccessibleModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
+

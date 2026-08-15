@@ -20,9 +20,11 @@ updates:
         patterns:
           - "@testing-library/*"
           - "@types/*"
-          - react-scripts
+          - "@vitejs/*"
+          - jsdom
           - typescript
-          - web-vitals
+          - vite
+          - vitest
     labels:
       - dependencies
 
@@ -32,3 +34,4 @@ updates:
       interval: monthly
     labels:
       - dependencies
+

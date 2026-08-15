@@ -22,7 +22,7 @@
 
 ### 前提条件
 
-- Node.js 20（CIと同じLTS版を推奨）
+- Node.js 20.19以上（CIと同じバージョンを推奨）
 - npm または yarn
 
 ### 手順
@@ -42,7 +42,7 @@
     ```bash
     npm start
     ```
-    ブラウザで http://localhost:3000 が開きます。
+    ブラウザで http://localhost:5173 を開きます。
 
 ## 使い方
 
@@ -69,6 +69,7 @@
 - **TypeScript**: 型安全なコード
 - **UUID**: ユニークID生成
 - **LocalStorage**: データの永続化
+- **Vite / Vitest**: 開発サーバー、ビルド、単体テスト
 
 ## Grok3によるVibe Codingについて
 
@@ -102,4 +103,5 @@ npm run test:ci
 npm run build
 ```
 
-NetlifyをGitHubリポジトリに接続している場合は、Pull RequestごとのDeploy Previewで動作確認し、`main`へのマージ後に本番へ反映してください。推奨設定は、Build commandが`npm run build`、Publish directoryが`build`、Node.jsが`20`です。本番反映前にDeploy Previewでタスクの追加・編集・削除、依存関係、Undo/Redo、インポート/エクスポート、再読み込み後の保存状態を確認してください。
+NetlifyをGitHubリポジトリに接続している場合は、Pull RequestごとのDeploy Previewで動作確認し、`main`へのマージ後に本番へ反映してください。設定は`netlify.toml`で管理し、Build commandは`npm run build`、Publish directoryは`dist`、Node.jsは`20.19.0`です。本番反映前にDeploy Previewでタスクの追加・編集・削除、依存関係、Undo/Redo、インポート/エクスポート、再読み込み後の保存状態を確認してください。
+
