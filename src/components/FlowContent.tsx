@@ -13,7 +13,7 @@ import ReactFlow, {
 import { EditModal } from './EditModal';
 import { ProjectSelectModal } from './ProjectSelectModal';
 import { EditProjectTitleModal } from './EditProjectTitleModal';
-import { Project, TaskNode } from '../App';
+import { Project, TaskNode } from '../types';
 import { updateStyles, areAllParentsCompleted, wouldCreateCycle } from '../utils/graphUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { createNewLocalProject, saveCurrentProjectAsNew, handleDeleteProject } from '../utils/projectUtils';
