@@ -1,37 +1,61 @@
-import { Node, Edge, MarkerType } from 'reactflow';interface TaskNodeData {
+import { Node, Edge, MarkerType } from 'reactflow';
+
+interface TaskNodeData {
   label: string;
   completed: boolean;
-}type TaskNode = Node<TaskNodeData>;export const detectAllCycles = (arrows: Edge[]): Set<string> => {
-  const graph: { [key: string]: string[] } = {};
+}
+
+type TaskNode = Node<TaskNodeData>;
+
+const canReach = (start: string, goal: string, arrows: Edge[]): boolean => {
+  const graph = new Map<string, string[]>();
+  arrows.forEach(({ source, target }) => {
+    graph.set(source, [...(graph.get(source) ?? []), target]);
+  });
+
+  const pending = [start];
   const visited = new Set<string>();
-  const recStack = new Set<string>();
-  const cycleArrows = new Set<string>();  arrows.forEach((arrow) => {
-    if (!graph[arrow.source]) graph[arrow.source] = [];
-    graph[arrow.source].push(arrow.target);
-  });  const dfs = (taskId: string): void => {
-    visited.add(taskId);
-    recStack.add(taskId);
-    const neighbors = graph[taskId] || [];
-    for (const neighbor of neighbors) {
-      if (!visited.has(neighbor)) {
-        dfs(neighbor);
-      } else if (recStack.has(neighbor)) {
-        const arrowId = arrows.find((e) => e.source === taskId && e.target === neighbor)?.id;
-        if (arrowId) cycleArrows.add(arrowId);
-      }
+
+  while (pending.length > 0) {
+    const current = pending.pop()!;
+    if (current === goal) return true;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    pending.push(...(graph.get(current) ?? []));
+  }
+
+  return false;
+};
+
+/** Returns true when adding source -> target would make the graph cyclic. */
+export const wouldCreateCycle = (source: string, target: string, arrows: Edge[]): boolean =>
+  source === target || canReach(target, source, arrows);
+
+export const detectAllCycles = (arrows: Edge[]): Set<string> => {
+  const cycleArrows = new Set<string>();
+
+  arrows.forEach((arrow) => {
+    const remainingArrows = arrows.filter((candidate) => candidate.id !== arrow.id);
+    if (canReach(arrow.target, arrow.source, remainingArrows)) {
+      cycleArrows.add(arrow.id);
     }
-    recStack.delete(taskId);
-  };  Object.keys(graph).forEach((taskId) => {
-    if (!visited.has(taskId)) dfs(taskId);
-  });  return cycleArrows;
-};export const areAllParentsCompleted = (taskId: string, tasks: TaskNode[], arrows: Edge[]): boolean => {
+  });
+
+  return cycleArrows;
+};
+
+export const areAllParentsCompleted = (taskId: string, tasks: TaskNode[], arrows: Edge[]): boolean => {
   const parentArrows = arrows.filter((arrow) => arrow.target === taskId);
   return parentArrows.length === 0 || parentArrows.every((arrow) => tasks.find((n) => n.id === arrow.source)?.data.completed);
-};export const hasIncompleteParent = (taskId: string, tasks: TaskNode[], arrows: Edge[]): boolean => {
+};
+
+export const hasIncompleteParent = (taskId: string, tasks: TaskNode[], arrows: Edge[]): boolean => {
   const task = tasks.find((t) => t.id === taskId);
   if (!task?.data.completed) return false;
   return arrows.filter((arrow) => arrow.target === taskId).some((arrow) => !tasks.find((n) => n.id === arrow.source)?.data.completed);
-};export const updateStyles = (tasks: TaskNode[], arrows: Edge[], selectedTaskId?: string | null, selectedArrowId?: string | null): { tasks: TaskNode[]; arrows: Edge[] } => {
+};
+
+export const updateStyles = (tasks: TaskNode[], arrows: Edge[], selectedTaskId?: string | null, selectedArrowId?: string | null): { tasks: TaskNode[]; arrows: Edge[] } => {
   const cycleArrows = detectAllCycles(arrows);
   return {
     arrows: arrows.map((arrow) => {
@@ -70,4 +94,3 @@ import { Node, Edge, MarkerType } from 'reactflow';interface TaskNodeData {
     }),
   };
 };
-
