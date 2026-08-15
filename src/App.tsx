@@ -3,6 +3,7 @@ import { ReactFlowProvider, Node, Edge, MarkerType } from 'reactflow';
 import { v4 as uuidv4 } from 'uuid';
 import 'reactflow/dist/style.css';
 import { FlowContent } from './components/FlowContent';
+import { loadProjects } from './utils/storageUtils';
 
 export interface TaskNodeData {
   label: string;
@@ -18,7 +19,7 @@ export interface Project {
   arrows: Edge[];
   taskIdCounter: number;
   lastSavedAt?: string;
-  viewport?: { x: number; y: number; zoom: number }; // 位置情報を追加（オプショナル）
+  viewport?: { x: number; y: number; zoom: number };
 }
 
 const defaultTasks: TaskNode[] = [
@@ -31,25 +32,23 @@ const defaultArrows: Edge[] = [
   { id: 'e1-3', source: '1', target: '3', type: 'straight', markerEnd: { type: MarkerType.Arrow } },
 ];
 
+const createDefaultProject = (): Project => ({
+  localId: uuidv4(),
+  title: 'デフォルトプロジェクト',
+  tasks: defaultTasks,
+  arrows: defaultArrows,
+  taskIdCounter: 4,
+  lastSavedAt: new Date().toISOString(),
+});
+
 /**
  * アプリケーションのメインコンポーネント。
  * プロジェクトの状態管理とReactFlowのプロバイダーを提供。
  */
 const App: React.FC = () => {
-  const savedProjects = localStorage.getItem('projects');
-  const initialProjects: Project[] = savedProjects
-    ? JSON.parse(savedProjects)
-    : [
-        {
-          localId: uuidv4(),
-          title: 'デフォルトプロジェクト',
-          tasks: defaultTasks,
-          arrows: defaultArrows,
-          taskIdCounter: 4,
-          lastSavedAt: new Date().toISOString(),
-        },
-      ];
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  const [projects, setProjects] = useState<Project[]>(() =>
+    loadProjects(localStorage.getItem('projects'), [createDefaultProject()])
+  );
   const [currentProjectIndex, setCurrentProjectIndex] = useState<number>(0);
 
   return (
