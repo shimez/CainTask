@@ -25,13 +25,15 @@ updates:
           - typescript
           - vite
           - vitest
-    labels:
-      - dependencies
+    ignore:
+      - dependency-name: "@testing-library/jest-dom"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: jsdom
+        update-types:
+          - "version-update:semver-major"
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
-    labels:
-      - dependencies
-
