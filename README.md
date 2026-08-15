@@ -22,7 +22,7 @@
 
 ### 前提条件
 
-- Node.js（v16以上推奨）
+- Node.js 20（CIと同じLTS版を推奨）
 - npm または yarn
 
 ### 手順
@@ -40,7 +40,7 @@
 
 3. **アプリを起動**
     ```bash
-    npm run start:cmd
+    npm start
     ```
     ブラウザで http://localhost:3000 が開きます。
 
@@ -92,3 +92,14 @@
 
 - [React Flow](https://reactflow.dev/) の最高のライブラリに感謝。
 - Grok3の「Vibe Coding」に敬意を。AIってやっぱすごいね。
+
+## 品質確認とデプロイ
+
+Pull RequestではGitHub Actionsが自動的にテストと本番ビルドを確認します。
+
+```bash
+npm run test:ci
+npm run build
+```
+
+NetlifyをGitHubリポジトリに接続している場合は、Pull RequestごとのDeploy Previewで動作確認し、`main`へのマージ後に本番へ反映してください。推奨設定は、Build commandが`npm run build`、Publish directoryが`build`、Node.jsが`20`です。本番反映前にDeploy Previewでタスクの追加・編集・削除、依存関係、Undo/Redo、インポート/エクスポート、再読み込み後の保存状態を確認してください。
