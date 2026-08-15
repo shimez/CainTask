@@ -14,7 +14,8 @@ import { EditModal } from './EditModal';
 import { ProjectSelectModal } from './ProjectSelectModal';
 import { EditProjectTitleModal } from './EditProjectTitleModal';
 import { Project, TaskNode } from '../App';
-import { updateStyles, areAllParentsCompleted } from '../utils/graphUtils';
+import { updateStyles, areAllParentsCompleted, wouldCreateCycle } from '../utils/graphUtils';
+import { v4 as uuidv4 } from 'uuid';
 import { createNewLocalProject, saveCurrentProjectAsNew, handleDeleteProject } from '../utils/projectUtils';
 
 import undoIcon from '../assets/undo.png';
@@ -93,18 +94,22 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
    * 現在のプロジェクト状態をローカルストレージに保存。
    * ビューポートの位置情報も含めて保存し、履歴を更新。
    */
-  const saveToLocalStorage = useCallback(() => {
+  const saveToLocalStorage = useCallback((
+    nextTasks: TaskNode[] = tasks,
+    nextArrows: Edge[] = arrows,
+    nextTaskIdCounter: number = taskIdCounter
+  ) => {
     const viewport = getViewport();
     const updatedProjects = effectiveProjects.map((p, idx) =>
       idx === effectiveIndex
-        ? { ...p, tasks, arrows, taskIdCounter, lastSavedAt: new Date().toISOString(), viewport }
+        ? { ...p, tasks: nextTasks, arrows: nextArrows, taskIdCounter: nextTaskIdCounter, lastSavedAt: new Date().toISOString(), viewport }
         : p
     );
     setProjects(updatedProjects);
     localStorage.setItem('projects', JSON.stringify(updatedProjects));
     localStorage.setItem('lastProjectId', effectiveProjects[effectiveIndex].localId);
     setHistory((prev) => {
-      const newHistory = [...prev.slice(0, historyIndex + 1), { tasks: [...tasks], arrows: [...arrows] }];
+      const newHistory = [...prev.slice(0, historyIndex + 1), { tasks: [...nextTasks], arrows: [...nextArrows] }];
       setHistoryIndex(newHistory.length - 1);
       return newHistory;
     });
@@ -163,9 +168,13 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
       );
 
       if (isDuplicate) return;
+      if (wouldCreateCycle(params.source, params.target, arrows)) {
+        window.alert('循環する依存関係は作成できません');
+        return;
+      }
 
       const newEdge: Edge = {
-        id: `e${arrows.length + 1}`,
+        id: `e-${uuidv4()}`,
         source: params.source,
         target: params.target,
         type: arrowType,
@@ -175,9 +184,9 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
       const { tasks: updatedTasks, arrows: styledArrows } = updateStyles(tasks, newArrows, selectedTaskId, selectedArrowId);
       setTasks(updatedTasks);
       setArrows(styledArrows);
-      saveToLocalStorage();
+      saveToLocalStorage(updatedTasks, styledArrows, taskIdCounter);
     },
-    [arrows, arrowType, tasks, selectedTaskId, selectedArrowId, setTasks, setArrows, saveToLocalStorage] // 'tasks' を追加
+    [arrows, arrowType, tasks, taskIdCounter, selectedTaskId, selectedArrowId, setTasks, setArrows, saveToLocalStorage]
   );
 
   const onEdgeClick = useCallback(
@@ -202,11 +211,11 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
         }));
         const { tasks: updatedTasks, arrows: styledArrows } = updateStyles(tasks, updatedArrows, selectedTaskId, selectedArrowId);
         setTasks(updatedTasks);
-        saveToLocalStorage();
+        saveToLocalStorage(updatedTasks, styledArrows, taskIdCounter);
         return styledArrows;
       });
     },
-    [tasks, selectedTaskId, selectedArrowId, setTasks, setArrows, saveToLocalStorage]
+    [tasks, taskIdCounter, selectedTaskId, selectedArrowId, setTasks, setArrows, saveToLocalStorage]
   );
 
   /**
@@ -243,10 +252,10 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
       const updatedTasks = [...prevTasks, newTask];
       const { tasks: styledTasks, arrows: styledArrows } = updateStyles(updatedTasks, arrows, selectedTaskId, selectedArrowId);
       setArrows(styledArrows);
+      saveToLocalStorage(styledTasks, styledArrows, taskIdCounter + 1);
       return styledTasks;
     });
     setTaskIdCounter((prev) => prev + 1);
-    saveToLocalStorage();
   }, [taskIdCounter, arrows, selectedTaskId, selectedArrowId, setTasks, setArrows, saveToLocalStorage, project, getViewport]);
 
   const onTaskClick = useCallback((event: React.MouseEvent, task: TaskNode) => {
@@ -273,21 +282,21 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
         const updatedArrows = arrows.filter((a) => a.source !== selectedTaskId && a.target !== selectedTaskId);
         const { tasks: styledTasks, arrows: styledArrows } = updateStyles(updatedTasks, updatedArrows, null, selectedArrowId);
         setArrows(styledArrows);
+        saveToLocalStorage(styledTasks, styledArrows, taskIdCounter);
         return styledTasks;
       });
       setSelectedTaskId(null);
-      saveToLocalStorage();
     } else if (selectedArrowId) {
       setArrows((prevArrows) => {
         const updatedArrows = prevArrows.filter((a) => a.id !== selectedArrowId);
         const { tasks: styledTasks, arrows: styledArrows } = updateStyles(tasks, updatedArrows, null, null);
         setTasks(styledTasks);
+        saveToLocalStorage(styledTasks, styledArrows, taskIdCounter);
         return styledArrows;
       });
       setSelectedArrowId(null);
-      saveToLocalStorage();
     }
-  }, [selectedTaskId, selectedArrowId, tasks, arrows, setTasks, setArrows, saveToLocalStorage]);
+  }, [selectedTaskId, selectedArrowId, tasks, arrows, taskIdCounter, setTasks, setArrows, saveToLocalStorage]);
 
   const updateTask = useCallback(
     (id: string, label: string, completed: boolean) => {
@@ -302,11 +311,11 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
         });
         const { tasks: styledTasks, arrows: styledArrows } = updateStyles(newTasks, arrows, selectedTaskId, selectedArrowId);
         setArrows(styledArrows);
+        saveToLocalStorage(styledTasks, styledArrows, taskIdCounter);
         return styledTasks;
       });
-      saveToLocalStorage();
     },
-    [arrows, selectedTaskId, selectedArrowId, setTasks, setArrows, saveToLocalStorage]
+    [arrows, taskIdCounter, selectedTaskId, selectedArrowId, setTasks, setArrows, saveToLocalStorage]
   );
 
   const handleNodesChange = useCallback(
