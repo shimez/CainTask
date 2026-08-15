@@ -188,7 +188,7 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
       setTasks(updatedTasks);
       setArrows(styledArrows);
     },
-    [arrows, setTasks, setArrows] // 'tasks' を削除
+    [tasks, arrows, setTasks, setArrows]
   );
 
   const handleArrowTypeChange = useCallback(
@@ -247,7 +247,7 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
     });
     setTaskIdCounter((prev) => prev + 1);
     saveToLocalStorage();
-  }, [taskIdCounter, tasks, arrows, selectedTaskId, selectedArrowId, setTasks, setArrows, saveToLocalStorage, project, getViewport]);
+  }, [taskIdCounter, arrows, selectedTaskId, selectedArrowId, setTasks, setArrows, saveToLocalStorage, project, getViewport]);
 
   const onTaskClick = useCallback((event: React.MouseEvent, task: TaskNode) => {
     setSelectedTaskId(task.id);
