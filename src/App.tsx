@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ReactFlowProvider, MarkerType } from 'reactflow';
+import { ReactFlowProvider, MarkerType, Edge } from 'reactflow';
 import { v4 as uuidv4 } from 'uuid';
 import 'reactflow/dist/style.css';
 import { FlowContent } from './components/FlowContent';
