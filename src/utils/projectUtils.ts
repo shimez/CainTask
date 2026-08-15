@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Project, TaskNode } from '../App';
+import { Project, TaskNode } from '../types';
 import { Edge } from 'reactflow';
 
 // 新規プロジェクト作成（テンプレートベース）
