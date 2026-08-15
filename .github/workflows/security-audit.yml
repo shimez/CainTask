@@ -1,0 +1,41 @@
+name: Dependency security report
+
+on:
+  pull_request:
+    paths:
+      - package.json
+      - package-lock.json
+  workflow_dispatch:
+  schedule:
+    - cron: "17 0 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Generate npm audit report
+        id: audit
+        continue-on-error: true
+        run: npm audit --json > npm-audit.json
+      - name: Add audit summary
+        if: always()
+        run: |
+          node -e "const fs=require('fs'); const p='npm-audit.json'; if(!fs.existsSync(p)){process.exit(0)} const r=JSON.parse(fs.readFileSync(p)); const v=r.metadata?.vulnerabilities ?? {}; fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '## npm audit\n\n' + Object.entries(v).map(([k,n]) => '- ' + k + ': ' + n).join('\n') + '\n')"
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-report
+          path: npm-audit.json
+          if-no-files-found: ignore
+          retention-days: 14
