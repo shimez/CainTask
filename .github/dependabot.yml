@@ -1,0 +1,34 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 5
+    groups:
+      react-runtime:
+        patterns:
+          - react
+          - react-dom
+          - reactflow
+          - uuid
+      test-and-build-tooling:
+        dependency-type: development
+        patterns:
+          - "@testing-library/*"
+          - "@types/*"
+          - react-scripts
+          - typescript
+          - web-vitals
+    labels:
+      - dependencies
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels:
+      - dependencies
