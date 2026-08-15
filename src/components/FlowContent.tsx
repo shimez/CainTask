@@ -8,6 +8,7 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   MarkerType,
+  NodeChange,
   useReactFlow,
 } from 'reactflow';
 import { EditModal } from './EditModal';
@@ -304,12 +305,12 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
   );
 
   const handleNodesChange = useCallback(
-    (changes: any) => {
+    (changes: NodeChange[]) => {
       onTasksChange(changes);
-      if (changes.some((change: any) => change.type === 'position' && change.dragging)) {
+      if (changes.some((change) => change.type === 'position' && change.dragging)) {
         setIsDragging(true);
       }
-      if (changes.some((change: any) => change.type === 'position' && !change.dragging && isDragging)) {
+      if (changes.some((change) => change.type === 'position' && !change.dragging && isDragging)) {
         setIsDragging(false);
         saveToLocalStorage();
       }
@@ -434,7 +435,11 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
       const modifier = event.ctrlKey || event.metaKey;
       if (modifier && event.key.toLowerCase() === 'z') {
         event.preventDefault();
-        event.shiftKey ? redo() : undo();
+        if (event.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
       } else if (modifier && event.key.toLowerCase() === 'y') {
         event.preventDefault();
         redo();
@@ -750,3 +755,4 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
     </>
   );
 };
+

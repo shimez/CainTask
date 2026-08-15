@@ -6,8 +6,8 @@ import { Edge } from 'reactflow';
 export const createNewLocalProject = (
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>,
   setCurrentProjectIndex: React.Dispatch<React.SetStateAction<number>>,
-  setTasks: any,
-  setArrows: any,
+  setTasks: React.Dispatch<React.SetStateAction<TaskNode[]>>,
+  setArrows: React.Dispatch<React.SetStateAction<Edge[]>>,
   setTaskIdCounter: React.Dispatch<React.SetStateAction<number>>
 ) => {
   const newProject: Project = {
@@ -66,8 +66,8 @@ export const handleDeleteProject = (
   localId: string,
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>,
   setCurrentProjectIndex: React.Dispatch<React.SetStateAction<number>>,
-  setTasks: any,
-  setArrows: any,
+  setTasks: React.Dispatch<React.SetStateAction<TaskNode[]>>,
+  setArrows: React.Dispatch<React.SetStateAction<Edge[]>>,
   setTaskIdCounter: React.Dispatch<React.SetStateAction<number>>,
   currentProjectIndex: number
 ) => {
@@ -90,3 +90,4 @@ export const handleDeleteProject = (
     return updatedProjects;
   });
 };
+
