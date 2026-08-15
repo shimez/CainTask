@@ -18,6 +18,7 @@ import { updateStyles, areAllParentsCompleted, wouldCreateCycle } from '../utils
 import { v4 as uuidv4 } from 'uuid';
 import { createNewLocalProject, saveCurrentProjectAsNew, handleDeleteProject } from '../utils/projectUtils';
 import { useGraphHistory } from '../hooks/useGraphHistory';
+import { parseProjectFile, serializeProjectFile } from '../utils/projectData';
 
 import undoIcon from '../assets/undo.png';
 import redoIcon from '../assets/redo.png';
@@ -311,7 +312,7 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
   const exportData = useCallback(() => {
     const viewport = getViewport();
     const data = { tasks, arrows, taskIdCounter, title: effectiveProjects[effectiveIndex]?.title || '無題のプロジェクト', viewport };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const blob = new Blob([serializeProjectFile(data)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -327,24 +328,24 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const data = JSON.parse(e.target?.result as string);
-          const updatedArrows = (data.arrows || effectiveProjects[0].arrows).map((arrow: Edge) => ({
+          const data = parseProjectFile(JSON.parse(e.target?.result as string));
+          const updatedArrows = data.arrows.map((arrow: Edge) => ({
             ...arrow,
             type: arrowType,
             markerEnd: { type: MarkerType.ArrowClosed },
           }));
           const { tasks: updatedTasks, arrows: styledArrows } = updateStyles(
-            data.tasks || effectiveProjects[0].tasks,
+            data.tasks,
             updatedArrows,
             selectedTaskId,
             selectedArrowId
           );
           const newProject: Project = {
-            localId: require('uuid').v4(),
+            localId: uuidv4(),
             title: data.title || 'インポートしたプロジェクト',
             tasks: updatedTasks,
             arrows: styledArrows,
-            taskIdCounter: data.taskIdCounter || 4,
+            taskIdCounter: data.taskIdCounter,
             lastSavedAt: new Date().toISOString(),
             viewport: data.viewport,
           };
@@ -353,7 +354,7 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
             setCurrentProjectIndex(updatedProjects.length - 1);
             setTasks(updatedTasks);
             setArrows(styledArrows);
-            setTaskIdCounter(data.taskIdCounter || 4);
+            setTaskIdCounter(data.taskIdCounter);
             if (newProject.viewport) {
               setViewport(newProject.viewport);
             }
@@ -361,7 +362,8 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
             return updatedProjects;
           });
         } catch (error) {
-          alert('無効なJSONファイルです');
+          const message = error instanceof Error ? error.message : '無効なJSONファイルです';
+          alert(message);
         }
       };
       reader.readAsText(file);
