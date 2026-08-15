@@ -1,5 +1,5 @@
 import React from 'react';
-import { Project } from '../App';
+import { Project } from '../types';
 
 /** モーダルのz-index値。背景より前面に表示するための基準値 */
 const MODAL_Z_INDEX = 300;

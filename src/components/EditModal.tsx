@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TaskNode } from '../App';
+import { TaskNode } from '../types';
 import { Edge } from 'reactflow';
 
 /** モーダルのz-index値。背景より前面に表示するための基準値 */

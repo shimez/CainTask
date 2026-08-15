@@ -1,4 +1,4 @@
-import type { Project } from '../App';
+import type { Project } from '../types';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;

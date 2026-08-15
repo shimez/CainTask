@@ -13,10 +13,12 @@ import ReactFlow, {
 import { EditModal } from './EditModal';
 import { ProjectSelectModal } from './ProjectSelectModal';
 import { EditProjectTitleModal } from './EditProjectTitleModal';
-import { Project, TaskNode } from '../App';
+import { Project, TaskNode } from '../types';
 import { updateStyles, areAllParentsCompleted, wouldCreateCycle } from '../utils/graphUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { createNewLocalProject, saveCurrentProjectAsNew, handleDeleteProject } from '../utils/projectUtils';
+import { useGraphHistory } from '../hooks/useGraphHistory';
+import { parseProjectFile, serializeProjectFile } from '../utils/projectData';
 
 import undoIcon from '../assets/undo.png';
 import redoIcon from '../assets/redo.png';
@@ -80,8 +82,6 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
   const [selectedArrowId, setSelectedArrowId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<TaskNode | null>(null);
   const [taskIdCounter, setTaskIdCounter] = useState<number>(effectiveProjects[effectiveIndex]?.taskIdCounter || sampleProject.taskIdCounter);
-  const [history, setHistory] = useState<{ tasks: TaskNode[]; arrows: Edge[] }[]>([]);
-  const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const taskOperationsRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,6 +89,7 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
   const [activeTab, setActiveTab] = useState<'tasks' | 'projects' | 'files'>('tasks');
   const [showProjectSelectModal, setShowProjectSelectModal] = useState<boolean>(false);
   const [showEditTitleModal, setShowEditTitleModal] = useState<boolean>(false);
+  const { canUndo, canRedo, record: recordHistory, reset: resetHistory, undo, redo } = useGraphHistory(setTasks, setArrows);
 
   /**
    * 現在のプロジェクト状態をローカルストレージに保存。
@@ -108,32 +109,8 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
     setProjects(updatedProjects);
     localStorage.setItem('projects', JSON.stringify(updatedProjects));
     localStorage.setItem('lastProjectId', effectiveProjects[effectiveIndex].localId);
-    setHistory((prev) => {
-      const newHistory = [...prev.slice(0, historyIndex + 1), { tasks: [...nextTasks], arrows: [...nextArrows] }];
-      setHistoryIndex(newHistory.length - 1);
-      return newHistory;
-    });
-  }, [effectiveProjects, effectiveIndex, tasks, arrows, taskIdCounter, setProjects, historyIndex, getViewport]);
-
-  /** Undo操作。履歴を1つ前に戻し、タスクと矢印を復元 */
-  const undo = useCallback(() => {
-    if (historyIndex > 0) {
-      setHistoryIndex((prev) => prev - 1);
-      const { tasks: prevTasks, arrows: prevArrows } = history[historyIndex - 1];
-      setTasks(prevTasks);
-      setArrows(prevArrows);
-    }
-  }, [history, historyIndex, setTasks, setArrows]);
-
-  /** Redo操作。履歴を1つ進め、タスクと矢印を復元 */
-  const redo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      setHistoryIndex((prev) => prev + 1);
-      const { tasks: nextTasks, arrows: nextArrows } = history[historyIndex + 1];
-      setTasks(nextTasks);
-      setArrows(nextArrows);
-    }
-  }, [history, historyIndex, setTasks, setArrows]);
+    recordHistory({ tasks: nextTasks, arrows: nextArrows });
+  }, [effectiveProjects, effectiveIndex, tasks, arrows, taskIdCounter, setProjects, getViewport, recordHistory]);
 
   useEffect(() => {
     const handleBeforeUnload = () => saveToLocalStorage();
@@ -335,7 +312,7 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
   const exportData = useCallback(() => {
     const viewport = getViewport();
     const data = { tasks, arrows, taskIdCounter, title: effectiveProjects[effectiveIndex]?.title || '無題のプロジェクト', viewport };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const blob = new Blob([serializeProjectFile(data)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -351,24 +328,24 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const data = JSON.parse(e.target?.result as string);
-          const updatedArrows = (data.arrows || effectiveProjects[0].arrows).map((arrow: Edge) => ({
+          const data = parseProjectFile(JSON.parse(e.target?.result as string));
+          const updatedArrows = data.arrows.map((arrow: Edge) => ({
             ...arrow,
             type: arrowType,
             markerEnd: { type: MarkerType.ArrowClosed },
           }));
           const { tasks: updatedTasks, arrows: styledArrows } = updateStyles(
-            data.tasks || effectiveProjects[0].tasks,
+            data.tasks,
             updatedArrows,
             selectedTaskId,
             selectedArrowId
           );
           const newProject: Project = {
-            localId: require('uuid').v4(),
+            localId: uuidv4(),
             title: data.title || 'インポートしたプロジェクト',
             tasks: updatedTasks,
             arrows: styledArrows,
-            taskIdCounter: data.taskIdCounter || 4,
+            taskIdCounter: data.taskIdCounter,
             lastSavedAt: new Date().toISOString(),
             viewport: data.viewport,
           };
@@ -377,7 +354,7 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
             setCurrentProjectIndex(updatedProjects.length - 1);
             setTasks(updatedTasks);
             setArrows(styledArrows);
-            setTaskIdCounter(data.taskIdCounter || 4);
+            setTaskIdCounter(data.taskIdCounter);
             if (newProject.viewport) {
               setViewport(newProject.viewport);
             }
@@ -385,13 +362,14 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
             return updatedProjects;
           });
         } catch (error) {
-          alert('無効なJSONファイルです');
+          const message = error instanceof Error ? error.message : '無効なJSONファイルです';
+          alert(message);
         }
       };
       reader.readAsText(file);
       event.target.value = '';
     },
-    [arrowType, selectedTaskId, selectedArrowId, setProjects, setCurrentProjectIndex, setTasks, setArrows, saveToLocalStorage, effectiveProjects, setViewport]
+    [arrowType, selectedTaskId, selectedArrowId, setProjects, setCurrentProjectIndex, setTasks, setArrows, saveToLocalStorage, setViewport]
   );
 
   const triggerFileInput = () => fileInputRef.current?.click();
@@ -403,6 +381,7 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
       setArrows([]);
       setTimeout(() => {
         const index = effectiveProjects.findIndex((p) => p.localId === project.localId);
+        resetHistory();
         setCurrentProjectIndex(index);
         setTasks(project.tasks);
         const unifiedArrows = project.arrows.map((arrow) => ({
@@ -422,7 +401,7 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
         }
       }, 0);
     },
-    [effectiveProjects, saveToLocalStorage, setTasks, setArrows, setTaskIdCounter, setCurrentProjectIndex, arrowType, selectedTaskId, selectedArrowId, setViewport, fitView]
+    [effectiveProjects, saveToLocalStorage, resetHistory, setTasks, setArrows, setTaskIdCounter, setCurrentProjectIndex, arrowType, selectedTaskId, selectedArrowId, setViewport, fitView]
   );
 
   useEffect(() => {
@@ -581,10 +560,10 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
               >
                 削除
               </button>
-              <button onClick={undo} disabled={historyIndex <= 0} style={{ padding: '5px', border: 'none', background: 'none', cursor: 'pointer' }} title="元に戻す">
+              <button onClick={undo} disabled={!canUndo} style={{ padding: '5px', border: 'none', background: 'none', cursor: 'pointer' }} title="元に戻す">
                 <img src={undoIcon} alt="Undo" style={{ width: ICON_SIZE, height: ICON_SIZE }} />
               </button>
-              <button onClick={redo} disabled={historyIndex >= history.length - 1} style={{ padding: '5px', border: 'none', background: 'none', cursor: 'pointer' }} title="やり直す">
+              <button onClick={redo} disabled={!canRedo} style={{ padding: '5px', border: 'none', background: 'none', cursor: 'pointer' }} title="やり直す">
                 <img src={redoIcon} alt="Redo" style={{ width: ICON_SIZE, height: ICON_SIZE }} />
               </button>
               <div

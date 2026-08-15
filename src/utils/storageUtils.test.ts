@@ -1,5 +1,5 @@
 import { loadProjects } from './storageUtils';
-import type { Project } from '../App';
+import type { Project } from '../types';
 
 const fallback: Project[] = [
   {

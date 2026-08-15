@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Project } from '../App';
+import { Project } from '../types';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 
 /** モーダルのz-index値。背景より前面に表示するための基準値 */

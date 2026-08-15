@@ -1,26 +1,11 @@
 import React, { useState } from 'react';
-import { ReactFlowProvider, Node, Edge, MarkerType } from 'reactflow';
+import { ReactFlowProvider, MarkerType, Edge } from 'reactflow';
 import { v4 as uuidv4 } from 'uuid';
 import 'reactflow/dist/style.css';
 import { FlowContent } from './components/FlowContent';
 import { loadProjects } from './utils/storageUtils';
+import { Project, TaskNode } from './types';
 
-export interface TaskNodeData {
-  label: string;
-  completed: boolean;
-}
-
-export type TaskNode = Node<TaskNodeData>;
-
-export interface Project {
-  localId: string;
-  title: string;
-  tasks: TaskNode[];
-  arrows: Edge[];
-  taskIdCounter: number;
-  lastSavedAt?: string;
-  viewport?: { x: number; y: number; zoom: number };
-}
 
 const defaultTasks: TaskNode[] = [
   { id: '1', data: { label: 'タスク1: 企画書作成', completed: false }, position: { x: 250, y: 0 } },
