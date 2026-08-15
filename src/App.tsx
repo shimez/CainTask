@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ReactFlowProvider, MarkerType, Edge } from 'reactflow';
 import { v4 as uuidv4 } from 'uuid';
 import 'reactflow/dist/style.css';
+import './App.css';
 import { FlowContent } from './components/FlowContent';
 import { loadProjects } from './utils/storageUtils';
 import { Project, TaskNode } from './types';

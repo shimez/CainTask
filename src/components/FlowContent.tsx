@@ -89,7 +89,15 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
   const [activeTab, setActiveTab] = useState<'tasks' | 'projects' | 'files'>('tasks');
   const [showProjectSelectModal, setShowProjectSelectModal] = useState<boolean>(false);
   const [showEditTitleModal, setShowEditTitleModal] = useState<boolean>(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimerRef = useRef<number | null>(null);
   const { canUndo, canRedo, record: recordHistory, reset: resetHistory, undo, redo } = useGraphHistory(setTasks, setArrows);
+
+  const showNotice = useCallback((message: string) => {
+    setNotice(message);
+    if (noticeTimerRef.current !== null) window.clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = window.setTimeout(() => setNotice(null), 4000);
+  }, []);
 
   /**
    * 現在のプロジェクト状態をローカルストレージに保存。
@@ -146,7 +154,7 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
 
       if (isDuplicate) return;
       if (wouldCreateCycle(params.source, params.target, arrows)) {
-        window.alert('循環する依存関係は作成できません');
+        showNotice('循環する依存関係は作成できません');
         return;
       }
 
@@ -163,7 +171,7 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
       setArrows(styledArrows);
       saveToLocalStorage(updatedTasks, styledArrows, taskIdCounter);
     },
-    [arrows, arrowType, tasks, taskIdCounter, selectedTaskId, selectedArrowId, setTasks, setArrows, saveToLocalStorage]
+    [arrows, arrowType, tasks, taskIdCounter, selectedTaskId, selectedArrowId, setTasks, setArrows, saveToLocalStorage, showNotice]
   );
 
   const onEdgeClick = useCallback(
@@ -363,13 +371,13 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
           });
         } catch (error) {
           const message = error instanceof Error ? error.message : '無効なJSONファイルです';
-          alert(message);
+          showNotice(message);
         }
       };
       reader.readAsText(file);
       event.target.value = '';
     },
-    [arrowType, selectedTaskId, selectedArrowId, setProjects, setCurrentProjectIndex, setTasks, setArrows, saveToLocalStorage, setViewport]
+    [arrowType, selectedTaskId, selectedArrowId, setProjects, setCurrentProjectIndex, setTasks, setArrows, saveToLocalStorage, setViewport, showNotice]
   );
 
   const triggerFileInput = () => fileInputRef.current?.click();
@@ -419,6 +427,28 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
     setTimeout(() => fitView(), 0);
   }, [setProjects, setCurrentProjectIndex, setTasks, setArrows, setTaskIdCounter, fitView]);
 
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches('input, textarea, select')) return;
+      const modifier = event.ctrlKey || event.metaKey;
+      if (modifier && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        event.shiftKey ? redo() : undo();
+      } else if (modifier && event.key.toLowerCase() === 'y') {
+        event.preventDefault();
+        redo();
+      } else if (event.key === 'Delete' || event.key === 'Backspace') {
+        if (selectedTaskId || selectedArrowId) {
+          event.preventDefault();
+          deleteSelected();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, [deleteSelected, redo, selectedArrowId, selectedTaskId, undo]);
+
   return (
     <>
       {showProjectSelectModal && (
@@ -464,7 +494,7 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
         <Controls />
         <MiniMap />
       </ReactFlow>
-      <div style={{ position: 'absolute', top: 10, left: 10, zIndex: OPERATION_PANEL_Z_INDEX, maxWidth: 'calc(100vw - 30px)', overflow: 'hidden' }}>
+      <div className="operation-panel" style={{ position: 'absolute', top: 10, left: 10, zIndex: OPERATION_PANEL_Z_INDEX, maxWidth: 'calc(100vw - 30px)', overflow: 'hidden' }}>
         <div style={{ marginBottom: BUTTON_GAP }}>
           <select
             value={effectiveProjects[effectiveIndex]?.localId || ''}
@@ -712,6 +742,10 @@ export const FlowContent: React.FC<FlowContentProps> = ({ projects, currentProje
           説明書
         </a>
       </div>
+      <div className="status-legend" aria-label="タスク状態の凡例">
+        <span>✓ 完了</span><span>● 着手可能</span><span>! 依存タスク未完了</span><span>青枠 選択中</span>
+      </div>
+      {notice && <div className="app-notice" role="status" aria-live="polite">{notice}</div>}
       <EditModal task={editingTask} tasks={tasks} arrows={arrows} onSave={updateTask} onClose={() => setEditingTask(null)} />
     </>
   );
