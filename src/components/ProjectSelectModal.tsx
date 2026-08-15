@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
 import { Project } from '../types';
+import { AccessibleModal } from './AccessibleModal';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
-
-/** モーダルのz-index値。背景より前面に表示するための基準値 */
-const MODAL_Z_INDEX = 200;
-/** モーダルの幅（ピクセル）。プロジェクト一覧が収まる適切なサイズ */
-const MODAL_WIDTH = 400;
-/** ボタンの間隔（ピクセル）。レイアウト調整用 */
-const BUTTON_GAP = 10;
 
 interface ProjectSelectModalProps {
   projects: Project[];
@@ -16,62 +10,45 @@ interface ProjectSelectModalProps {
   onClose: () => void;
 }
 
-/**
- * プロジェクト選択用のモーダル。
- * プロジェクト一覧を表示し、選択または削除を可能にする。
- */
 export const ProjectSelectModal: React.FC<ProjectSelectModalProps> = ({ projects, onSelect, onDelete, onClose }) => {
   const [deleteProject, setDeleteProject] = useState<Project | null>(null);
-
-  const handleDeleteClick = (project: Project) => {
-    setDeleteProject(project);
-  };
-
   const confirmDelete = () => {
-    if (deleteProject) {
-      onDelete(deleteProject.localId);
-      setDeleteProject(null);
-    }
-  };
-
-  const cancelDelete = () => {
+    if (!deleteProject) return;
+    onDelete(deleteProject.localId);
     setDeleteProject(null);
   };
 
   return (
     <>
-      <div style={{ 
-        position: 'fixed', 
-        top: 0, 
-        left: 0, 
-        width: '100%', 
-        height: '100%', 
-        background: 'rgba(0,0,0,0.5)', 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        zIndex: MODAL_Z_INDEX 
-      }}>
-        <div style={{ background: 'white', padding: 20, borderRadius: 5, width: MODAL_WIDTH }}>
-          <h3>プロジェクト選択</h3>
+      <AccessibleModal titleId="select-project-title" onClose={onClose}>
+        <h2 id="select-project-title">プロジェクト管理</h2>
+        <ul className="project-list">
           {projects.map((project) => (
-            <div key={project.localId} style={{ marginBottom: BUTTON_GAP, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button onClick={() => onSelect(project)} style={{ width: '70%', textAlign: 'left' }}>
-                {project.title} {project.lastSavedAt ? `(${new Date(project.lastSavedAt).toLocaleString()})` : '(未保存)'}
+            <li key={project.localId}>
+              <button className="project-select-button" onClick={() => onSelect(project)}>
+                <span>{project.title}</span>
+                <small>{project.lastSavedAt ? new Date(project.lastSavedAt).toLocaleString() : '未保存'}</small>
               </button>
               <button
-                onClick={() => handleDeleteClick(project)}
-                style={{ padding: '5px', background: 'red', color: 'white', border: 'none', borderRadius: 3 }}
+                className="danger-button"
+                onClick={() => setDeleteProject(project)}
+                aria-label={`${project.title}を削除`}
               >
                 削除
               </button>
-            </div>
+            </li>
           ))}
-          <button onClick={onClose} style={{ marginTop: BUTTON_GAP }}>閉じる</button>
+        </ul>
+        <div className="modal-actions">
+          <button onClick={onClose}>閉じる</button>
         </div>
-      </div>
+      </AccessibleModal>
       {deleteProject && (
-        <DeleteConfirmModal project={deleteProject} onConfirm={confirmDelete} onCancel={cancelDelete} />
+        <DeleteConfirmModal
+          project={deleteProject}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteProject(null)}
+        />
       )}
     </>
   );
